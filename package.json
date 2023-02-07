@@ -1,7 +1,12 @@
 {
   "name": "paragon-erp-webshop-backend",
   "version": "1.0.0",
-  "type": "commonjs",
+  "description": "Jonar Code Challenge",
+  "author": "Salim Rabat <s.rabbat@hotmail.com>",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
   "dependencies": {
     "body-parser": "^1.20.1",
     "dotenv": "^10.0.0",
