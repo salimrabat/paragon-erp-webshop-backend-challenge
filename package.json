@@ -1,0 +1,12 @@
+{
+  "name": "paragon-erp-webshop-backend",
+  "version": "1.0.0",
+  "type": "commonjs",
+  "dependencies": {
+    "body-parser": "^1.20.1",
+    "dotenv": "^10.0.0",
+    "express": "^4.17.1",
+    "knex": "^2.4.2",
+    "pg": "^8.7.3"
+  }
+}
