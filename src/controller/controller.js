@@ -4,71 +4,81 @@ const router = express.Router();
 const dataBase = new PostgresqlDBHandler()
 
 
+/**
+ * Test database connection
+ */
 router.get('/', async (req, res) => {
-    await dataBase.testConnection()
-        .then(_ => {
-            res.status(200).json({
-                message: "Connection working"
-            });
-        })
-        .catch(reason => {
-            console.log('Could not fetch all users from database', reason);
-        })
-})
+    try {
+        await dataBase.testConnection()
+        res.status(200).json({
+            message: "Connection working"
+        });
+    } catch (error) {
+        console.log('Could not fetch all users from database', error);
+        res.status(500).json({
+            message: "Could not establish connection to database"
+        });
+    }
+});
 
 /**
  * Api request to get all users in the database.
  */
-router.get('/users', async (req, res) =>
-    await dataBase.getAllUsers()
-        .then(users => {
-            res.status(200).json({
-                users: users
-            });
-        })
-        .catch(reason => {
-            console.log('Could not fetch all users from database', reason);
-        })
-)
+router.get('/users', async (req, res) => {
+    try {
+        const users = await dataBase.getAllUsers();
+        res.status(200).json({
+            users: users
+        });
+    } catch (error) {
+        console.log('Could not fetch all users from database', error);
+        res.status(500).json({
+            message: "Could not fetch all users from database"
+        });
+    }
+});
 
 /**
  * Api request to get user by id.
  */
 router.get('/user', async (req, res) => {
     try {
-        const user = await dataBase.getUserById(req.query.id)
-        if (user != null) {
+        const userId = req.query.id;
+        const user = await dataBase.getUserById(userId);
+        if (user) {
             res.status(200).json({
                 user: user
             });
         } else {
             res.status(204).json({
-                message: "User doesn't exist"
+                message: "User not found"
             });
         }
-
-    } catch (reason) {
-        console.log('Could not fetch user from database', reason);
+    } catch (error) {
+        console.log('Could not fetch user from database', error);
         res.status(500).json({
-        })
+            message: "Could not fetch user from database"
+        });
     }
-})
+});
 
 
 /**
  * Api request to get all products in the database.
  */
 router.get('/products', async (req, res) => {
-    await dataBase.getAllProducts()
-        .then(products => {
-            res.status(200).json({
-                products: products
-            });
-        })
-        .catch(reason => {
-            console.log('Could not fetch all products from database', reason);
-        })
-})
+    try {
+        const products = await dataBase.getAllProducts();
+        res.status(200).json({
+            products: products
+        });
+    } catch (error) {
+        console.log('Could not fetch all products from database', error);
+        res.status(500).json({
+            message: "Could not fetch all products from database"
+        });
+    }
+});
 
 
 /**
@@ -81,43 +91,47 @@ router.get('/products', async (req, res) => {
  * @param {Array} products
  */
 router.post('/order', async (req, res) => {
-    const userId = req.body.userId
-    let streetAddress = req.body.streetAddress
-    let postalCode = req.body.postalCode
-    let city = req.body.city
-    let country = req.body.country
-    let products = req.body.products
+    const { userId, streetAddress, postalCode, city, country, products } = req.body;
 
-    let user = await dataBase.getUserById(userId)
-    if (user === null || user === undefined) {
-        return res.status(200).json({
-            message: "User does not exist",
-            userId: req.body.userId
+    // Validate the request body
+    if (!userId || typeof userId !== 'string' ||
+        !streetAddress || typeof streetAddress !== 'string' ||
+        !postalCode || typeof postalCode !== 'string' ||
+        !city || typeof city !== 'string' ||
+        !country || typeof country !== 'string' ||
+        !Array.isArray(products)) {
+        return res.status(400).json({ message: 'Invalid request body' });
+    }
+
+    // Check if the user exists
+    const user = await dataBase.getUserById(userId);
+    if (!user) {
+        return res.status(404).json({
+            message: 'User not found',
+            userId
         });
     }
-    for (let i = 0; i < products.length; i++) {
-        let product = products[i]
-        let result = await dataBase.getProductByIdAndCheckIfInStock(product.id, product.quantity)
-        if (result === null || result === undefined) {
-            return res.status(200).json({
+
+    for (const product of products) {
+        const result = await dataBase.getProductByIdAndCheckIfInStock(product.id, product.quantity);
+        if (!result) {
+            return res.status(400).json({
                 message: "Product out of stock",
                 productId: product.id
             });
         }
     }
-    await dataBase.createOrder(userId, streetAddress, postalCode, city, country, products)
-        .then(orderId => {
-            res.status(200).json({
-                orderId: orderId,
-                message: "Order Confirmed!"
-            });
-        })
-        .catch(reason => {
-            res.status(500).json({
-                message: "Order not created"
-            });
-            console.log('Could not create order', reason);
-        })
+
+    try {
+        const orderId = await dataBase.createOrder(userId, streetAddress, postalCode, city, country, products);
+        res.status(201).json({
+            orderId,
+            message: 'Order confirmed'
+        });
+    } catch (error) {
+        console.error('Could not create order', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 
 })
 
